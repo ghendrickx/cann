@@ -4,7 +4,7 @@ import torch
 from src import norm
 
 
-class _NNModel(torch.nn.Module):
+class NNModel(torch.nn.Module):
     """Architecture of neural network building upon the `Module`-class of PyTorch."""
     _n_data = 250
 
@@ -44,7 +44,7 @@ class CANN:
         :type f_model: str
         :type device: str, optional
         """
-        self._model = self._import_model(_NNModel(), f_model)
+        self._model = self._import_model(NNModel(), f_model)
         self._device = device
 
     def __call__(self, data: np.ndarray) -> np.ndarray:
