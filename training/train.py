@@ -19,17 +19,15 @@ class Training:
      -  save:   `.save(file_name)`
     """
 
-    def __init__(
-            self, _model: torch.nn.Module, loss_function: torch.loss._Loss, optimizer: torch.optim.Optimizer, **kwargs
-    ) -> None:
+    def __init__(self, nn_model: torch.nn.Module, loss_function, optimizer: torch.optim.Optimizer, **kwargs) -> None:
         """
-        :param _model: NN-model
+        :param nn_model: NN-model
         :param loss_function: loss function
         :param optimizer: NN-optimizer
         :param kwargs: optional arguments
             device: device used for training, defaults to 'cpu'
 
-        :type _model: torch.nn.Module
+        :type nn_model: torch.nn.Module
         :type loss_function: torch.loss._Loss
         :type optimizer: torch.optim.Optimizer
         :type kwargs: optional
@@ -37,7 +35,7 @@ class Training:
         """
         self.device: str = kwargs.get('device', 'cpu')
 
-        self._model = _model.to(self.device)
+        self.nn_model = nn_model.to(self.device)
         self.loss = loss_function
         self.opt = optimizer
 
@@ -82,7 +80,7 @@ class Training:
             y_true = torch.tensor(y[i_sel]).float().to(self.device)
 
             # _model prediction
-            y_model = self._model(x_tensor)
+            y_model = self.nn_model(x_tensor)
 
             # calculate loss
             loss = self.loss(y_model, y_true)
@@ -113,13 +111,12 @@ class Training:
         x_tensor = torch.tensor(x).float().to(self.device)
         y_true = torch.tensor(y).float().to(self.device)
 
-        y_model = self._model(x_tensor)
+        y_model = self.nn_model(x_tensor)
 
         loss = self.loss(y_model, y_true)
         loss = float(loss.detach().cpu())
 
         return loss
-
 
     def save(self, file_name: str) -> None:
         """Save the latest state of the NN-model.
@@ -127,7 +124,7 @@ class Training:
         :param file_name: file name
         :type file_name: str
         """
-        torch.save(self._model.state_dict(), file_name)
+        torch.save(self.nn_model.state_dict(), file_name)
 
 
 def train(_model: torch.nn.Module, x: np.ndarray, y: np.ndarray, **kwargs) -> tuple:
@@ -165,7 +162,7 @@ def train(_model: torch.nn.Module, x: np.ndarray, y: np.ndarray, **kwargs) -> tu
     """
     # optional arguments
     file_name: str = kwargs.get('file_name', 'cann.pkl')
-    loss: torch.loss._Loss = kwargs.get('loss_function', torch.nn.MSELoss())
+    loss = kwargs.get('loss_function', torch.nn.MSELoss())
     max_epochs: int = kwargs.get('max_epochs', 1000)
     opt: torch.optim.Optimizer = kwargs.get('optimizer', torch.optim.Adam(_model.parameters()))
     rnd_size: int = kwargs.get('random_sample_size')
@@ -207,13 +204,49 @@ def train(_model: torch.nn.Module, x: np.ndarray, y: np.ndarray, **kwargs) -> tu
         epochs += step_epoch
 
     # return training metrics
-    return obj_train._model, mse_train, mse_test
+    return obj_train.nn_model, mse_train, mse_test
 
 
-def prepare_data(file_name: str) -> tuple:
-    pass
+def prepare_data(f_profiles: str, f_indexing: str) -> tuple:
+    """Prepare training data from JARKUS-profiles. Two files are used:
+     1. File with cross-shore profiles (JARKUS-profiles, *.npy);
+     2. File with profile indexing (N, 2) coupling profiles at T with T + 1 (*.npy).
+
+    :param f_profiles: file name of profiles
+    :param f_indexing: file name of indexing
+
+    :type f_profiles: str
+    :type f_indexing: str
+
+    :return: in- and output data
+    :rtype: tuple
+    """
+    # load data
+    profiles = np.load(f_profiles)
+    indexing = np.load(f_indexing)
+
+    # create profile couples
+    p_couples = profiles[indexing]
+
+    # return in- and output data
+    return p_couples[:, 0], p_couples[:, 1]
 
 
 if __name__ == '__main__':
-    inp, out = prepare_data('')
-    nn_model, *mse = train(model._NNModel, inp, out)
+    # pre-processing
+    wd = r'C:\Users\gghendrickx\Downloads\Jarkus'
+    inp, out = prepare_data(wd + r'\profiles.npy', wd + r'\indexing.npy')
+
+    # training
+    ep_max = 10000
+    d_ep = 100
+    _, *mse = train(model.NNModel(), inp, out, file_name=wd + r'\cann.pkl', max_epochs=ep_max, step_epoch=d_ep)
+
+    # figure
+    import matplotlib.pyplot as plt
+    plt.plot(np.arange(d_ep, ep_max, step=d_ep), np.sqrt(mse[0]), label='train')
+    plt.plot(np.arange(d_ep, ep_max, step=d_ep), np.sqrt(mse[1]), label='test')
+    plt.xlabel('epochs [--]')
+    plt.ylabel('RMSE [m]')
+    plt.legend()
+    plt.show()
