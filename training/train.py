@@ -1,5 +1,8 @@
-import typing
+"""
+Training pipeline of the neural network.
 
+Author: Gijs G. Hendrickx
+"""
 import numpy as np
 import torch
 from sklearn import model_selection
@@ -8,9 +11,9 @@ from src import norm, model
 
 
 class Training:
-    """Training object, maintaining the same NN-model, loss function, optimizer, etc.
+    """Training object, maintaining the same NN-model, loss function, optimizer, etc., throughout the training pipeline.
 
-    This object trains, tests, and saves an NN-model:
+    This training class trains, tests, and saves an NN-model:
      -  train:  `.fit(x_train, y_train, epochs, **kwargs) -> loss_list`
      -  test:   `.test(x_test, y_test) -> loss`
      -  save:   `.save(file_name)`
