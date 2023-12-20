@@ -1,3 +1,8 @@
+"""
+Normalisation functions (min-max normalisation).
+
+Author: Gijs G. Hendrickx
+"""
 _Z_MAX = 5
 _Z_MIN = -10
 
