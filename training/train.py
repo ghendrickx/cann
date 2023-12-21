@@ -3,6 +3,8 @@ Training pipeline of the neural network.
 
 Author: Gijs G. Hendrickx
 """
+import sys
+
 import numpy as np
 import torch
 from sklearn import model_selection
@@ -160,6 +162,12 @@ def train(_model: torch.nn.Module, x: np.ndarray, y: np.ndarray, **kwargs) -> tu
 
     :raise AssertionError: if `test_size` is not between 0 and 1
     """
+
+    def _progress(i: int, n: int) -> None:
+        """Progress-display: `i / n`."""
+        sys.stdout.write(f'\r{i:>6}/{n}')
+        sys.stdout.flush()
+
     # optional arguments
     file_name: str = kwargs.get('file_name', 'cann.pkl')
     loss = kwargs.get('loss_function', torch.nn.MSELoss())
@@ -190,6 +198,9 @@ def train(_model: torch.nn.Module, x: np.ndarray, y: np.ndarray, **kwargs) -> tu
 
     # training sequence
     while epochs < max_epochs:
+        # progress
+        _progress(epochs, max_epochs)
+
         # train NN
         loss = obj_train.fit(x_train, y_train, step_epoch, random_sample_size=rnd_size)
         mse_train.append(loss[-1])
@@ -202,6 +213,9 @@ def train(_model: torch.nn.Module, x: np.ndarray, y: np.ndarray, **kwargs) -> tu
 
         # increment epochs
         epochs += step_epoch
+
+    # progress
+    _progress(epochs, max_epochs)
 
     # return training metrics
     return obj_train.nn_model, mse_train, mse_test
@@ -235,17 +249,29 @@ def prepare_data(f_profiles: str, f_indexing: str) -> tuple:
 if __name__ == '__main__':
     # pre-processing
     wd = r'C:\Users\gghendrickx\Downloads\Jarkus'
-    inp, out = prepare_data(wd + r'\profiles.npy', wd + r'\indexing.npy')
+    inp, out = prepare_data(wd + r'\profiles-2.npy', wd + r'\indexing-3.npy')
 
     # training
-    ep_max = 10000
+    ep_max = 100000
     d_ep = 100
-    _, *mse = train(model.NNModel(), inp, out, file_name=wd + r'\cann.pkl', max_epochs=ep_max, step_epoch=d_ep)
+    _, *mse = train(
+        model.NNModel(), inp, out, file_name=wd + r'\cann.pkl',
+        max_epochs=ep_max, step_epoch=d_ep
+    )
+
+    # export
+    epochs = np.arange(d_ep, ep_max, step=d_ep)
+    with open(wd + r'\mse_train.csv', mode='w') as f:
+        for ep, err in zip(epochs, mse[0]):
+            f.write(f'{ep},{err}\n')
+    with open(wd + r'\mse_test.csv', mode='w') as f:
+        for ep, err in zip(epochs, mse[1]):
+            f.write(f'{ep},{err}\n')
 
     # figure
     import matplotlib.pyplot as plt
-    plt.plot(np.arange(d_ep, ep_max, step=d_ep), np.sqrt(mse[0]), label='train')
-    plt.plot(np.arange(d_ep, ep_max, step=d_ep), np.sqrt(mse[1]), label='test')
+    plt.plot(epochs, np.sqrt(mse[0]), label='train')
+    plt.plot(epochs, np.sqrt(mse[1]), label='test')
     plt.xlabel('epochs [--]')
     plt.ylabel('RMSE [m]')
     plt.legend()
